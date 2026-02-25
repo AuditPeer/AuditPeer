@@ -15,20 +15,24 @@ interface ProfileModalProps {
 const STEPS = ['Identity', 'Role', 'Avatar']
 
 export default function ProfileModal({ open, mode, profile, onClose, onSave }: ProfileModalProps) {
-  const [step, setStep]         = useState(1)
-  const [username, setUsername] = useState('')
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [jobTitle, setJobTitle] = useState('')
-  const [industry, setIndustry] = useState('')
+  const [view, setView]           = useState<'login' | 'signup'>('login')
+  const [step, setStep]           = useState(1)
+  const [username, setUsername]   = useState('')
+  const [email, setEmail]         = useState('')
+  const [password, setPassword]   = useState('')
+  const [jobTitle, setJobTitle]   = useState('')
+  const [industry, setIndustry]   = useState('')
   const [experience, setExperience] = useState('')
-  const [certs, setCerts]       = useState<string[]>([])
+  const [certs, setCerts]         = useState<string[]>([])
   const [avatarGrad, setAvatarGrad] = useState(AVATAR_GRADIENTS[0])
+  const [loginError, setLoginError] = useState('')
 
   useEffect(() => {
     if (!open) return
     setStep(1)
+    setLoginError('')
     if (mode === 'edit' && profile) {
+      setView('signup') // reuse signup steps for edit
       setUsername(profile.username)
       setJobTitle(profile.job_title || '')
       setIndustry(profile.industry || '')
@@ -36,6 +40,7 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
       setCerts(profile.certifications || [])
       setAvatarGrad(profile.avatar_gradient || AVATAR_GRADIENTS[0])
     } else {
+      setView('login')
       setUsername(generateUsername())
       setEmail(''); setPassword(''); setJobTitle('')
       setIndustry(''); setExperience(''); setCerts([])
@@ -46,6 +51,7 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
   if (!open) return null
 
   const initials = getInitials(username) || '?'
+  const isEdit = mode === 'edit'
 
   const toggleCert = (cert: string) =>
     setCerts(prev => prev.includes(cert) ? prev.filter(c => c !== cert) : [...prev, cert])
@@ -55,6 +61,100 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
     onClose()
   }
 
+  // Simulate login — in production this hits Supabase Auth
+  const handleLogin = () => {
+    if (!email.trim() || !password.trim()) {
+      setLoginError('Please enter your email and password.')
+      return
+    }
+    // For demo: any email/password logs you in as a guest
+    onSave({ username: email.split('@')[0], avatar_gradient: AVATAR_GRADIENTS[0], certifications: [] })
+    onClose()
+  }
+
+  // ── LOGIN VIEW ─────────────────────────────────────────────
+  if (view === 'login' && !isEdit) {
+    return (
+      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-fade"
+        style={{ background: 'rgba(5,8,18,0.85)', backdropFilter: 'blur(8px)' }}
+        onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="bg-surface border border-border rounded-2xl w-full max-w-[420px] shadow-2xl animate-fade-slide">
+
+          {/* Header */}
+          <div className="border-b border-border px-7 py-5 flex justify-between items-start">
+            <div>
+              <h2 className="font-syne font-extrabold text-xl text-white">Welcome back</h2>
+              <p className="text-muted text-xs mt-0.5">Sign in to your AuditPeer account</p>
+            </div>
+            <button onClick={onClose} className="w-7 h-7 rounded-lg bg-surface2 border border-border text-muted flex items-center justify-center hover:text-white transition-colors">
+              <X size={14}/>
+            </button>
+          </div>
+
+          <div className="px-7 py-6">
+            {/* Logo mark */}
+            <div className="flex justify-center mb-6">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: 'linear-gradient(135deg, #00d4ff, #7b61ff)' }}>🔐</div>
+            </div>
+
+            {loginError && (
+              <div className="bg-red/8 border border-red/25 rounded-lg px-3 py-2 text-[12px] text-red mb-4">
+                {loginError}
+              </div>
+            )}
+
+            <label className="block font-mono text-[10px] uppercase tracking-widest text-muted mb-1.5">Email</label>
+            <input type="email" value={email} onChange={e => { setEmail(e.target.value); setLoginError('') }}
+              className="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-[13px] text-white outline-none focus:border-accent transition-colors mb-4"
+              placeholder="your@email.com"
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}/>
+
+            <label className="block font-mono text-[10px] uppercase tracking-widest text-muted mb-1.5">Password</label>
+            <input type="password" value={password} onChange={e => { setPassword(e.target.value); setLoginError('') }}
+              className="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-[13px] text-white outline-none focus:border-accent transition-colors mb-1"
+              placeholder="Your password"
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}/>
+
+            <div className="text-right mb-6">
+              <span className="font-mono text-[11px] text-accent cursor-pointer hover:underline">Forgot password?</span>
+            </div>
+
+            <button onClick={handleLogin}
+              className="w-full py-2.5 rounded-lg font-syne font-bold text-[14px] text-black transition-all hover:-translate-y-px mb-4"
+              style={{ background: '#00d4ff' }}>
+              Sign In →
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-border"/>
+              <span className="font-mono text-[10px] text-muted">or</span>
+              <div className="flex-1 h-px bg-border"/>
+            </div>
+
+            {/* Switch to signup */}
+            <div className="text-center">
+              <span className="text-[13px] text-muted">Don't have an account? </span>
+              <span
+                onClick={() => { setView('signup'); setLoginError('') }}
+                className="text-[13px] font-syne font-bold cursor-pointer hover:underline"
+                style={{ color: '#00d4ff' }}>
+                Create one free →
+              </span>
+            </div>
+
+            {/* Privacy note */}
+            <div className="mt-5 text-center font-mono text-[10px] text-muted/60 leading-relaxed">
+              🔒 Your real identity is never shown to the community.<br/>Anonymous usernames only.
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── SIGNUP / EDIT VIEW ────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-fade"
       style={{ background: 'rgba(5,8,18,0.85)', backdropFilter: 'blur(8px)' }}
@@ -65,10 +165,10 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
         <div className="sticky top-0 bg-surface border-b border-border px-7 py-5 flex justify-between items-start z-10">
           <div>
             <h2 className="font-syne font-extrabold text-xl text-white">
-              {mode === 'edit' ? 'Edit Profile' : 'Create Your Profile'}
+              {isEdit ? 'Edit Profile' : 'Create Your Profile'}
             </h2>
             <p className="text-muted text-xs mt-0.5">
-              {mode === 'edit' ? 'Update your community identity' : 'Set up your anonymous identity — no real name needed'}
+              {isEdit ? 'Update your community identity' : 'Set up your anonymous identity — no real name needed'}
             </p>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg bg-surface2 border border-border text-muted flex items-center justify-center hover:text-white transition-colors">
@@ -119,7 +219,7 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
                 </button>
               </div>
 
-              {mode === 'signup' && <>
+              {!isEdit && <>
                 <label className="block font-mono text-[10px] uppercase tracking-widest text-muted mb-1.5">
                   Email <span className="normal-case tracking-normal text-[9px]">(private — notifications only)</span>
                 </label>
@@ -128,8 +228,18 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
                   placeholder="your@email.com"/>
                 <label className="block font-mono text-[10px] uppercase tracking-widest text-muted mb-1.5">Password</label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-[13px] text-white outline-none focus:border-accent transition-colors"
+                  className="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-[13px] text-white outline-none focus:border-accent transition-colors mb-4"
                   placeholder="Min. 8 characters"/>
+
+                {/* Already have account link */}
+                <div className="text-center mt-2">
+                  <span className="text-[12px] text-muted">Already have an account? </span>
+                  <span onClick={() => setView('login')}
+                    className="text-[12px] font-syne font-bold cursor-pointer hover:underline"
+                    style={{ color: '#00d4ff' }}>
+                    Sign in instead
+                  </span>
+                </div>
               </>}
             </div>
           )}
@@ -196,9 +306,9 @@ export default function ProfileModal({ open, mode, profile, onClose, onSave }: P
 
           {/* Footer */}
           <div className="flex justify-between items-center mt-7 pt-5 border-t border-border">
-            <button onClick={() => setStep(s => s - 1)}
-              className={`px-4 py-2 rounded-lg font-syne font-semibold text-[13px] border border-border text-muted hover:text-white hover:border-muted transition-all ${step === 1 ? 'invisible' : ''}`}>
-              ← Back
+            <button onClick={() => step > 1 ? setStep(s => s - 1) : onClose()}
+              className="px-4 py-2 rounded-lg font-syne font-semibold text-[13px] border border-border text-muted hover:text-white hover:border-muted transition-all">
+              {step === 1 ? 'Cancel' : '← Back'}
             </button>
             <button onClick={() => step < 3 ? setStep(s => s + 1) : handleSave()}
               className="px-5 py-2 rounded-lg font-syne font-bold text-[13px] text-black transition-all hover:-translate-y-px"
