@@ -9,9 +9,10 @@ interface SidebarProps {
   feedFilter: FeedFilter
   onPageChange: (page: Page) => void
   onFeedFilter: (filter: FeedFilter) => void
+  onTagClick: (tag: string) => void
 }
 
-export default function Sidebar({ currentPage, feedFilter, onPageChange, onFeedFilter }: SidebarProps) {
+export default function Sidebar({ currentPage, feedFilter, onPageChange, onFeedFilter, onTagClick }: SidebarProps) {
   const navItem = (
     label: string,
     icon: string,
@@ -78,7 +79,10 @@ export default function Sidebar({ currentPage, feedFilter, onPageChange, onFeedF
         <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted mb-3 px-1">Tags</p>
         <div className="flex flex-wrap gap-1.5 px-1">
           {TAGS.map(tag => (
-            <span key={tag} className="tag text-[11px]">{tag}</span>
+            <span key={tag} className="tag text-[11px] cursor-pointer"
+              onClick={() => { onPageChange('feed'); onFeedFilter('newest'); onTagClick(tag) }}>
+              {tag}
+            </span>
           ))}
         </div>
       </div>

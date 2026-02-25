@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Bookmark } from 'lucide-react'
 import { getInitials, timeAgo } from '@/lib/utils'
 import type { Question } from '@/types'
 
@@ -8,12 +9,14 @@ interface QuestionCardProps {
   question: Question
   onVote: (id: string, value: 1 | -1) => void
   onTagClick: (tag: string) => void
+  onBookmark: (id: string, bookmarked: boolean) => void
   delay?: number
 }
 
-export default function QuestionCard({ question, onVote, onTagClick, delay = 0 }: QuestionCardProps) {
-  const [localVote, setLocalVote] = useState<1 | -1 | 0>(question.user_vote || 0)
-  const [voteCount, setVoteCount] = useState(question.vote_count)
+export default function QuestionCard({ question, onVote, onTagClick, onBookmark, delay = 0 }: QuestionCardProps) {
+  const [localVote, setLocalVote]   = useState<1 | -1 | 0>(question.user_vote || 0)
+  const [voteCount, setVoteCount]   = useState(question.vote_count)
+  const [bookmarked, setBookmarked] = useState((question as any).bookmarked || false)
   const router = useRouter()
 
   const handleVote = (val: 1 | -1) => {
@@ -22,6 +25,13 @@ export default function QuestionCard({ question, onVote, onTagClick, delay = 0 }
     setLocalVote(newVote as 1 | -1 | 0)
     setVoteCount(c => c + delta)
     onVote(question.id, val)
+  }
+
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = !bookmarked
+    setBookmarked(next)
+    onBookmark(question.id, next)
   }
 
   const answerStat = question.answer_count === 0
@@ -62,7 +72,19 @@ export default function QuestionCard({ question, onVote, onTagClick, delay = 0 }
 
       {/* Body */}
       <div className="min-w-0">
-        <div className="font-syne font-semibold text-[15px] text-white leading-snug mb-1.5 hover:text-accent transition-colors">
+        {/* Bookmark button */}
+        <button
+          onClick={handleBookmark}
+          title={bookmarked ? 'Remove bookmark' : 'Bookmark this question'}
+          className={`absolute top-4 right-4 w-7 h-7 rounded-md border flex items-center justify-center transition-all
+            ${bookmarked
+              ? 'bg-accent/10 border-accent text-accent'
+              : 'border-border text-muted hover:border-accent hover:text-accent'}`}
+        >
+          <Bookmark size={13} className={bookmarked ? 'fill-accent' : ''}/>
+        </button>
+
+        <div className="font-syne font-semibold text-[15px] text-white leading-snug mb-1.5 hover:text-accent transition-colors pr-10">
           {question.title}
         </div>
         <div className="text-muted text-[13px] leading-relaxed mb-3 line-clamp-2">

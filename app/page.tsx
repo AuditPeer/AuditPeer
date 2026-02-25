@@ -79,6 +79,16 @@ export default function Home() {
     ))
   }
 
+  const handleBookmark = (id: string, bookmarked: boolean) => {
+    setQuestions(qs => qs.map(q => q.id === id ? { ...q, bookmarked } as any : q))
+  }
+
+  const handleTagClick = (tag: string) => {
+    setSearchQuery(tag)
+    setFeedFilter('newest')
+    setPage('feed')
+  }
+
   const handleAskSubmit = (data: { title: string; body: string; tags: string[] }) => {
     const newQ: Question = {
       id: Date.now().toString(),
@@ -142,6 +152,7 @@ export default function Home() {
           feedFilter={feedFilter}
           onPageChange={setPage}
           onFeedFilter={(f) => { setFeedFilter(f); setPage('feed') }}
+          onTagClick={handleTagClick}
         />
 
         {/* Main content */}
@@ -172,7 +183,8 @@ export default function Home() {
               ) : (
                 filteredQuestions.map((q, i) => (
                   <QuestionCard key={q.id} question={q} onVote={handleVote}
-                    onTagClick={tag => { setSearchQuery(tag); setFeedFilter('newest') }}
+                    onTagClick={handleTagClick}
+                    onBookmark={handleBookmark}
                     delay={i * 0.04}/>
                 ))
               )}

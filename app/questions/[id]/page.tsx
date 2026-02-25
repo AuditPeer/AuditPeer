@@ -56,6 +56,15 @@ export default function QuestionPage() {
     setQuestion(q => q ? { ...q, is_answered: true } : q)
   }
 
+  const handleDeleteAnswer = (answerId: string) => {
+    setAnswers(prev => prev.filter(a => a.id !== answerId))
+    setQuestion(q => q ? { ...q, answer_count: Math.max(0, q.answer_count - 1) } : q)
+  }
+
+  const handleEditAnswer = (answerId: string, newBody: string) => {
+    setAnswers(prev => prev.map(a => a.id === answerId ? { ...a, body: newBody } : a))
+  }
+
   const handleSubmitAnswer = () => {
     if (!answerBody.trim()) return
     const newAnswer: Answer = {
@@ -186,8 +195,11 @@ export default function QuestionPage() {
                 key={answer.id}
                 answer={answer}
                 isQuestionAuthor={false}
+                currentUserId="me"
                 onVote={handleVoteAnswer}
                 onAccept={handleAccept}
+                onDelete={handleDeleteAnswer}
+                onEdit={handleEditAnswer}
               />
             ))}
             <div className="h-px bg-border my-8"/>
