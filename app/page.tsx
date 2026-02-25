@@ -5,10 +5,13 @@ import Sidebar from '@/components/layout/Sidebar'
 import QuestionCard from '@/components/feed/QuestionCard'
 import ProfileModal from '@/components/modals/ProfileModal'
 import AskModal from '@/components/modals/AskModal'
+import ShareTemplateModal from '@/components/modals/ShareTemplateModal'
 import JobsComingSoon from '@/components/ui/JobsComingSoon'
+import TemplateCard from '@/components/ui/TemplateCard'
 import { QUESTIONS_SEED } from '@/lib/seed'
+import { TEMPLATES_SEED } from '@/lib/seed-templates'
 import { generateUsername, getInitials, AVATAR_GRADIENTS } from '@/lib/utils'
-import type { Question, Profile, FeedFilter } from '@/types'
+import type { Question, Template, Profile, FeedFilter } from '@/types'
 
 type Page = 'feed' | 'jobs' | 'templates' | 'guidelines' | 'profile'
 
@@ -29,6 +32,9 @@ export default function Home() {
   const [page, setPage]               = useState<Page>('feed')
   const [feedFilter, setFeedFilter]   = useState<FeedFilter>('newest')
   const [questions, setQuestions]     = useState<Question[]>(QUESTIONS_SEED)
+  const [templates, setTemplates]     = useState<Template[]>(TEMPLATES_SEED)
+  const [templateFilter, setTemplateFilter] = useState<string>('all')
+  const [showShareModal, setShowShareModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [profile, setProfile]         = useState<Profile | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -110,7 +116,7 @@ export default function Home() {
   const ctaConfig: Record<Page, { label: string; action: () => void; show: boolean }> = {
     feed:       { label: '+ Ask Question', action: () => setShowAskModal(true), show: true },
     jobs:       { label: '🔔 Get Notified', action: () => {}, show: true },
-    templates:  { label: '+ Share Template', action: () => {}, show: true },
+    templates:  { label: '+ Share Template', action: () => setShowShareModal(true), show: true },
     guidelines: { label: '', action: () => {}, show: false },
     profile:    { label: '', action: () => {}, show: false },
   }
@@ -177,13 +183,68 @@ export default function Home() {
           {page === 'jobs' && <JobsComingSoon/>}
 
           {/* ── TEMPLATES ── */}
-          {page === 'templates' && (
-            <div className="text-center py-16 text-muted">
-              <div className="text-4xl mb-4">📄</div>
-              <div className="font-syne font-bold text-white text-lg mb-1">Templates</div>
-              <div className="text-sm">Community-reviewed audit templates — connect Supabase Storage to enable uploads.</div>
-            </div>
-          )}
+          {page === 'templates' && (() => {
+            const CATEGORIES = ['all', 'Evidence', 'Checklists', 'Risk Assessment', 'Reports', 'Policies']
+            const filtered = templateFilter === 'all'
+              ? templates
+              : templates.filter(t => t.category === templateFilter)
+            const sorted = [...filtered].sort((a, b) => b.download_count - a.download_count)
+
+            return (
+              <>
+                {/* Header + filters */}
+                <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                  <h1 className="font-syne font-extrabold text-xl text-white">
+                    Templates
+                    <span className="ml-2 font-mono text-[13px] font-normal" style={{ color: '#00d4ff' }}>
+                      {filtered.length}
+                    </span>
+                  </h1>
+                </div>
+
+                {/* Category filter tabs */}
+                <div className="flex gap-1.5 flex-wrap mb-6">
+                  {CATEGORIES.map(cat => (
+                    <button key={cat} onClick={() => setTemplateFilter(cat)}
+                      className={`px-3 py-1.5 rounded-lg font-syne font-semibold text-[12px] capitalize transition-all
+                        ${templateFilter === cat
+                          ? 'bg-accent/10 text-accent border border-accent/30'
+                          : 'text-muted border border-border hover:text-white hover:border-muted'}`}>
+                      {cat === 'all' ? 'All Templates' : cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sanitization reminder */}
+                <div className="bg-red/5 border border-red/20 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
+                  <span className="text-base flex-shrink-0 mt-0.5">⚠️</span>
+                  <p className="text-[12px] text-muted leading-relaxed">
+                    <strong className="text-white">Reminder:</strong> All templates must be fully sanitized before sharing — no client names, company names, internal reference numbers, or engagement details. See <span className="text-accent cursor-pointer hover:underline" onClick={() => setPage('guidelines')}>Guideline #8</span>.
+                  </p>
+                </div>
+
+                {/* Grid */}
+                {sorted.length === 0 ? (
+                  <div className="text-center py-16 text-muted">
+                    <div className="text-4xl mb-4">📄</div>
+                    <div className="font-syne font-bold text-white text-lg mb-1">No templates yet</div>
+                    <div className="text-sm">Be the first to share one in this category</div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {sorted.map((t, i) => (
+                      <TemplateCard
+                        key={t.id}
+                        template={t}
+                        onDownload={id => console.log('download', id)}
+                        delay={i * 0.04}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )
+          })()}
 
           {/* ── GUIDELINES ── */}
           {page === 'guidelines' && (
@@ -341,6 +402,35 @@ export default function Home() {
                 </div>
               </>
             )}
+            {page === 'templates' && (
+              <>
+                <div className="bg-surface border border-border rounded-xl p-4 mb-4">
+                  <h3 className="font-syne font-bold text-[13px] text-white mb-3">Template Stats</h3>
+                  {[
+                    [templates.length.toString(), 'Total Templates'],
+                    [templates.reduce((s,t) => s + t.download_count, 0).toLocaleString(), 'Total Downloads'],
+                    [([...templates].sort((a,b) => b.rating_avg - a.rating_avg)[0]?.rating_avg || 0).toFixed(1) + ' ★', 'Top Rating'],
+                  ].map(([v,l]) => (
+                    <div key={l} className="flex justify-between items-center py-1.5 border-b border-border last:border-0">
+                      <span className="font-mono text-[12px] text-muted">{l}</span>
+                      <span className="font-syne font-bold text-[13px]" style={{ color: '#00d4ff' }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-surface border border-border rounded-xl p-4">
+                  <h3 className="font-syne font-bold text-[13px] text-white mb-3">Most Downloaded</h3>
+                  {[...templates].sort((a,b) => b.download_count - a.download_count).slice(0,5).map((t, i) => (
+                    <div key={t.id} className="flex items-start gap-2 mb-3 last:mb-0">
+                      <span className="font-mono text-[11px] text-muted w-4 flex-shrink-0 mt-0.5">{i+1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-syne font-semibold text-[11px] text-white leading-snug mb-0.5 line-clamp-2">{t.title}</div>
+                        <div className="font-mono text-[10px] text-muted">{t.download_count.toLocaleString()} downloads</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </aside>
         )}
       </div>
@@ -357,6 +447,30 @@ export default function Home() {
         open={showAskModal}
         onClose={() => setShowAskModal(false)}
         onSubmit={handleAskSubmit}
+      />
+      <ShareTemplateModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onSubmit={data => {
+          const newTemplate: Template = {
+            id: Date.now().toString(),
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            file_url: '#',
+            file_format: data.file_format as any,
+            author_id: profile?.id || 'anon',
+            author: profile || undefined,
+            download_count: 0,
+            rating_avg: 0,
+            rating_count: 0,
+            tags: data.tags,
+            created_at: new Date().toISOString(),
+          }
+          setTemplates(prev => [newTemplate, ...prev])
+          setPage('templates')
+          setTemplateFilter('all')
+        }}
       />
     </>
   )

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getInitials, timeAgo } from '@/lib/utils'
 import type { Question } from '@/types'
 
@@ -13,6 +14,7 @@ interface QuestionCardProps {
 export default function QuestionCard({ question, onVote, onTagClick, delay = 0 }: QuestionCardProps) {
   const [localVote, setLocalVote] = useState<1 | -1 | 0>(question.user_vote || 0)
   const [voteCount, setVoteCount] = useState(question.vote_count)
+  const router = useRouter()
 
   const handleVote = (val: 1 | -1) => {
     const newVote = localVote === val ? 0 : val
@@ -37,6 +39,7 @@ export default function QuestionCard({ question, onVote, onTagClick, delay = 0 }
         animationDelay: `${delay}s`,
         borderLeft: question.is_answered ? '3px solid #00e5a0' : '3px solid transparent',
       }}
+      onClick={() => router.push(`/questions/${question.id}`)}
     >
       {/* Vote column */}
       <div className="flex flex-col items-center gap-1 pt-1">
